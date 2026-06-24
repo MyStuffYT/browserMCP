@@ -1,0 +1,12 @@
+{
+    "manifest_version": 3,
+    "name": "browserMCP client",
+    "version": "1.0.0",
+    "description": "Client that connects to browserMCP server",
+    "icons": {
+        "128": "128.png"
+    },
+    "host_permissions": [
+        "http://127.0.0.1:9000/*"
+    ]
+}
