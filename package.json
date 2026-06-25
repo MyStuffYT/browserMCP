@@ -1,0 +1,24 @@
+{
+  "name": "browsermcp",
+  "version": "1.0.0",
+  "description": "BrowserMCP server.",
+  "homepage": "https://github.com/MyStuffYT/browserMCP#readme",
+  "bugs": {
+    "url": "https://github.com/MyStuffYT/browserMCP/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MyStuffYT/browserMCP.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "fastmcp": "^4.3.2",
+    "zod": "^4.4.3"
+  }
+}

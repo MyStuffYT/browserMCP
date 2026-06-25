@@ -1,5 +1,15 @@
 let webSocket = null;
 
+const keepAlive = (i => state => {
+  if (state && !i) {
+    if (performance.now() > 20e3) chrome.runtime.getPlatformInfo();
+    i = setInterval(chrome.runtime.getPlatformInfo, 20e3);
+  } else if (!state && i) {
+    clearInterval(i);
+    i = 0;
+  }
+})();
+
 function connect() {
     if (webSocket !== null) {
         if (webSocket.readyState === 2) {
@@ -22,6 +32,7 @@ function close() {
     if (webSocket.readyState < 2) {
         webSocket.close();
     }
+    keepAlive(false);
 }
 
 chrome.runtime.onInstalled.addListener(function (object) {
@@ -48,15 +59,44 @@ chrome.runtime.onInstalled.addListener(function (object) {
 });
 
 chrome.runtime.onStartup.addListener(function() {
+    keepAlive(true);
     chrome.tabs.create({url:chrome.runtime.getURL("normal.html")});
     connect();
-
-    webSocket.onmessage = (event) => {
+    webSocket.onclose = (event) => {
+        connect();
+    }
+    webSocket.onmessage = async (event) => {
         console.log(event.data)
         if (event.data !== "'client'" && event.data !== "welcome") {
+            console.log(event.data)
             toolcall = JSON.parse(event.data)
+            console.log(toolcall)
             if (toolcall["call"] === "ping") {
-                webSocket.send("pong (from browserMCP client!)")
+                let ts = "Available tabs:\n";
+                const tabs = await chrome.tabs.query({});
+                for (let t of tabs) {
+                    console.log(t.id)
+                    ts+=`Tab title: ${t.title}\nTab ID: ${t.id}\n\n`
+                }
+                const groups = await chrome.tabGroups.query({});
+                for (let g of groups) {
+                    console.log(g.id)
+                    ts += `Group title: ${g.title}\nGroup ID: ${g.id}\n\n`
+                }
+                console.log(ts)
+                webSocket.send(JSON.stringify({"response": ts}));
+            }
+            if (toolcall["call"] === "tabg") {
+                console.log(`Tab to move: ${toolcall["arg"]["tab"]}`)
+                if (toolcall["arg"]["group"] !== undefined) {
+                    console.log(`Group to move to: ${toolcall["arg"]["group"]}`)
+                    await chrome.tabs.group({"tabIds": toolcall["arg"]["tab"], "groupID": toolcall["arg"]["group"]})
+                    webSocket.send(`Successful! (hopefully..)`)
+                } else {
+                    console.log("Creating1 new group..")
+                    const gid = await chrome.tabs.group({"tabIds": toolcall["arg"]["tab"]})
+                    webSocket.send(`Group ID created: ${gid.id}`)
+                }
             }
         }
     }

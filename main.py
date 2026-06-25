@@ -1,5 +1,6 @@
 from fastmcp import FastMCP
 from websockets.sync.client import connect
+import asyncio
 
 mcp = FastMCP("browserMCP")
 
