@@ -1,4 +1,5 @@
 let webSocket = null;
+let closed = false;
 
 const keepAlive = (i => state => {
   if (state && !i) {
@@ -10,21 +11,23 @@ const keepAlive = (i => state => {
   }
 })();
 
+keepAlive(true);
+
 function connect() {
     if (webSocket !== null) {
         if (webSocket.readyState === 2) {
             setInterval(connect, 500)
         } else if (webSocket.readyState === 3) {
             webSocket = new WebSocket("ws://127.0.0.1:9000/")
-            webSocket.onopen = (event) => {
-                webSocket.send("client");
-            }
+            //webSocket.onopen = (event) => {
+            //    webSocket.send("client");
+            //}
         }
     } else {
         webSocket = new WebSocket("ws://127.0.0.1:9000/")
-        webSocket.onopen = (event) => {
-            webSocket.send("client");
-        }
+        //webSocket.onopen = (event) => {
+        //    webSocket.send("client");
+        //}
     }
 }
 
@@ -36,15 +39,14 @@ function close() {
 }
 
 chrome.runtime.onInstalled.addListener(function (object) {
-
     if (object.reason === chrome.runtime.OnInstalledReason.INSTALL) {
         let internalUrl = chrome.runtime.getURL("success.html");
 
         webSocket = new WebSocket('ws://127.0.0.1:9000/');
-        webSocket.onopen = (event) => {
-            webSocket.send("client");
+        //webSocket.onopen = (event) => {
+        //    webSocket.send("client");
             //console.log(webSocket.readyState)
-        }
+        //}
 
         webSocket.onmessage = (event) => {
             if (event.data === "welcome") {
@@ -58,16 +60,19 @@ chrome.runtime.onInstalled.addListener(function (object) {
     }
 });
 
-chrome.runtime.onStartup.addListener(function() {
-    keepAlive(true);
-    chrome.tabs.create({url:chrome.runtime.getURL("normal.html")});
+function start() {
     connect();
+    webSocket.onopen = (event) => {
+        chrome.tabs.create({url:chrome.runtime.getURL("normal.html")});
+        closed = false;
+    }
     webSocket.onclose = (event) => {
-        connect();
+        //connect();
+        closed = true;
     }
     webSocket.onmessage = async (event) => {
         console.log(event.data)
-        if (event.data !== "'client'" && event.data !== "welcome") {
+        if (event.data !== "welcome") {
             console.log(event.data)
             toolcall = JSON.parse(event.data)
             console.log(toolcall)
@@ -95,9 +100,32 @@ chrome.runtime.onStartup.addListener(function() {
                 } else {
                     console.log("Creating1 new group..")
                     const gid = await chrome.tabs.group({"tabIds": toolcall["arg"]["tab"]})
-                    webSocket.send(`Group ID created: ${gid.id}`)
+                    webSocket.send(`Group ID created: ${gid}`)
+                }
+            }
+            if (toolcall["call"] === "tabt") {
+                try {
+                    console.log(`Tab to change title of: ${toolcall["arg"]["group"]}`)
+                    let g = await chrome.tabGroups.update(toolcall["arg"]["group"], {title: toolcall["arg"]["name"]})
+                    if (g.title === toolcall["arg"]["name"]) {
+                        webSocket.send("done")
+                    } else {
+                        webSocket.send("fail (unknown reason)")
+                    }
+                } catch (error) {
+                    webSocket.send(`fail (${error})`)
                 }
             }
         }
     }
-});
+};
+
+chrome.runtime.onStartup.addListener(start)
+
+function checkStatus() {
+    if(!webSocket || webSocket.readyState === 3) {
+        start()
+    }
+}
+
+setInterval(checkStatus, 1000)

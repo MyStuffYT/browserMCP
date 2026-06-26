@@ -3,4 +3,4 @@
 
 This MCP (Model Context Protocol) lets your AI easily configure, customize or manage your browser.
 
-and yea whatever yay
+

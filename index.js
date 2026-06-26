@@ -1,19 +1,40 @@
 import { FastMCP } from "fastmcp";
-import { stringbool, z } from "zod";
+import { z } from "zod";
+import { WebSocketServer } from "ws";
 
-const socket = new WebSocket('ws://localhost:9000');
+let socket = null;
 
 let arr = new Array();
 
-socket.addEventListener("open", (event) => {
-    socket.send("server");
+const wsserver = new WebSocketServer({ 
+  port: 9000
 });
 
-socket.addEventListener("message", (event) => {
-    if (event.data !== "'server'") {
-      arr.push(event.data)
+wsserver.on("connection", (s) => {
+    if (socket !== null) {
+        socket.close()
     }
+    socket = s
+    s.send("welcome")
+    s.on("message", (message) => {
+        arr.push(message.toString())
+    })
+    s.on("close", (event) => {
+        if (socket === s) {
+            socket = null;
+        }
+    })
 })
+
+//socket.addEventListener("open", (event) => {
+//    socket.send("server");
+//});
+
+//socket.addEventListener("message", (event) => {
+//    if (event.data !== "'server'") {
+//      arr.push(event.data)
+//    }
+//})
 
 const server = new FastMCP({
   name: "browserMCP",
@@ -35,16 +56,20 @@ server.addTool({
     name: "tabs",
     description: "Get current tabs.",
     execute: async (args) => {
-        let timeout = 0;
-        socket.send(JSON.stringify({"call": "ping", "arg": {}}));
-        while(arr.length === 0) {
-            await new Promise(resolve => setTimeout(resolve, 10));
-            timeout++;
-            if(timeout > 2500) {
-                arr.push("failed! (timeout)")
+        if (socket !== null) {
+            let timeout = 0;
+            socket.send(JSON.stringify({"call": "ping", "arg": {}}));
+            while(arr.length === 0) {
+                await new Promise(resolve => setTimeout(resolve, 10));
+                timeout++;
+                if(timeout > 2500) {
+                    arr.push("failed! (timeout)")
+                }
             }
+            return String(arr.pop())
+        } else {
+            return "No client connected."
         }
-        return String(arr.pop())
     }
 })
 
@@ -63,7 +88,7 @@ server.addTool({
             socket.send(JSON.stringify({"call": "tabg", "arg": {"tab": args.tabid, "group": args.groupid}}));
         }
         // let timeout = 0;
-        // socket.send(JSON.stringify({"call": "tabg", "arg": {arrgs.tab}}));
+        //socket.send(JSON.stringify({"call": "tabg", "arg": {arrgs.tab}}));
         while(arr.length === 0) {
             await new Promise(resolve => setTimeout(resolve, 10));
             timeout++;
@@ -74,6 +99,28 @@ server.addTool({
         return String(arr.pop())
     }
 })
+
+server.addTool({
+    name: "tabt",
+    description: "Change the title/name of a group",
+    parameters: z.object({
+        groupid: z.number().int().describe("Group id"),
+        title: z.string().describe("New title of group")
+    }),
+    execute: async (args) => {
+        let timeout = 0;
+        socket.send(JSON.stringify({"call":"tabt","arg":{"group": args.groupid, "name": args.title}}))
+        while(arr.length === 0) {
+            await new Promise(resolve => setTimeout(resolve, 10));
+            timeout++;
+            if(timeout > 2500) {
+                arr.push("failed! (timeout)")
+            }
+        }
+        return String(arr.pop())
+    }
+})
+
 
 server.start({
   transportType: "stdio",

@@ -19,6 +19,10 @@
   },
   "dependencies": {
     "fastmcp": "^4.3.2",
+    "ws": "^8.21.0",
     "zod": "^4.4.3"
+  },
+  "allowScripts": {
+    "tldjs@2.3.2": true
   }
 }
