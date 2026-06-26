@@ -1,0 +1,25 @@
+name: Create Archive
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Create zip
+      run: |
+        cd browserMCPclient
+        zip -r ../release.zip . -x "*.git*" "node_modules/*" ".editorconfig"
+
+    - name: Create Release and Upload Asset
+      uses: softprops/action-gh-release@v2
+      with:
+        files: release.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
