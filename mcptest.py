@@ -10,7 +10,7 @@ async def call_tool():
     async with client:
         print("done")
         await asyncio.to_thread(input, "press enter to call tool\n")
-        result = await client.call_tool("collapse_tab", {"groupid": 1848498057, "collapsed": False})
+        result = await client.call_tool("history_test")
         print(result)
 
 asyncio.run(call_tool())

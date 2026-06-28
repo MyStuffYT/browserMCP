@@ -55,7 +55,7 @@ server.addTool({
 server.addTool({
     name: "get_tabs",
     description: "Get current tabs.",
-    execute: async (args) => {
+    execute: async () => {
         if (socket !== null) {
             let timeout = 0;
             socket.send(JSON.stringify({"call": "ping", "arg": {}}));
@@ -254,6 +254,23 @@ server.addTool({
     execute: async (args) => {
         let timeout = 0;
         socket.send(JSON.stringify({"call": "tabd", "args": args.tabid}))
+        while(arr.length === 0) {
+            await new Promise(resolve => setTimeout(resolve, 10));
+            timeout++;
+            if(timeout > 2500) {
+                arr.push("failed! (timeout)")
+            }
+        }
+        return String(arr.pop())
+    }
+})
+
+server.addTool({
+    name: "history_test",
+    description: "Test history permissions.",
+    execute: async () => {
+        let timeout = 0;
+        socket.send(JSON.stringify({"call": "hist", "args": {}}))
         while(arr.length === 0) {
             await new Promise(resolve => setTimeout(resolve, 10));
             timeout++;

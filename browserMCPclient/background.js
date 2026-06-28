@@ -31,6 +31,11 @@ function connect() {
     }
 }
 
+async function historyAccess() {
+    const { historyAccess = false } = await chrome.storage.local.get(["historyAccess"])
+    return historyAccess
+}
+
 function close() {
     if (webSocket.readyState < 2) {
         webSocket.close();
@@ -195,6 +200,17 @@ function start() {
                         webSocket.send(`Successfully unloaded tab ${toolcall["args"]}`)
                     } else {
                         webSocket.send("Failed with unknown reason :O")
+                    }
+                } catch (error) {
+                    webSocket.send(`chrome fail (${error})`)
+                }
+            }
+            if (toolcall["call"] === "hist") { // History test
+                try {
+                    if (await historyAccess() === true) {
+                        webSocket.send("History permissions test: Enabled")
+                    } else {
+                        webSocket.send("History permissions test: Disabled")
                     }
                 } catch (error) {
                     webSocket.send(`chrome fail (${error})`)
