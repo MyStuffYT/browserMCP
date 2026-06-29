@@ -15,9 +15,7 @@ keepAlive(true);
 
 function connect() {
     if (webSocket !== null) {
-        if (webSocket.readyState === 2) {
-            setInterval(connect, 500)
-        } else if (webSocket.readyState === 3) {
+        if (webSocket.readyState === 3) {
             webSocket = new WebSocket("ws://127.0.0.1:9000/")
             //webSocket.onopen = (event) => {
             //    webSocket.send("client");
@@ -47,7 +45,7 @@ chrome.runtime.onInstalled.addListener(function (object) {
     if (object.reason === chrome.runtime.OnInstalledReason.INSTALL) {
         let internalUrl = chrome.runtime.getURL("success.html");
 
-        webSocket = new WebSocket('ws://127.0.0.1:9000/');
+        webSocket = new WebSocket('ws://localhost:9000/');
         //webSocket.onopen = (event) => {
         //    webSocket.send("client");
             //console.log(webSocket.readyState)
@@ -211,6 +209,34 @@ function start() {
                         webSocket.send("History permissions test: Enabled")
                     } else {
                         webSocket.send("History permissions test: Disabled")
+                    }
+                } catch (error) {
+                    webSocket.send(`chrome fail (${error})`)
+                }
+            }
+            if (toolcall["call"] == "hisg") { // get history
+                try {
+                    if (await historyAccess() === true) {
+                        if (toolcall["args"]["end"] - toolcall["args"]["start"] < 25*3600) {
+                            let hs = "";
+                            let ha = await chrome.history.search({text: toolcall["args"]["text"], 
+                                startTime: toolcall["args"]["start"]*1000,
+                                endTime: toolcall["args"]["end"]*1000,
+                                maxResults: toolcall["args"]["maxResults"]
+                            });
+                            if (ha.length > 0) {
+                                for (let entry of ha) {
+                                    hs += `Title: ${entry.title} / URL: ${entry.url}\n`
+                                }
+                                webSocket.send(hs)
+                            } else {
+                                webSocket.send("No entries found.")
+                            }
+                        } else {
+                            webSocket.send("Start and end time are over 24h (mcp error?)")
+                        }
+                    } else {
+                        webSocket.send("The user has not opted in for any history-based tools.")
                     }
                 } catch (error) {
                     webSocket.send(`chrome fail (${error})`)

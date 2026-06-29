@@ -282,6 +282,35 @@ server.addTool({
     }
 })
 
+server.addTool({
+    name: "simple_history_get",
+    description: "Query browser history in past offsets in hours (example: start=2, end=4). Start and end are relative. Maximum of 24h. Start must be a smaller value than end.",
+    parameters: z.object({
+        start: z.number().int().max(23).describe("The minimum age of history."),
+        end: z.number().int().max(24).describe("The maximum age of history."),
+        text: z.string().describe("Search query."),
+        maxResults: z.number().int().max(1000).describe("Max results to output. Try not to maximize output for less token usage.")
+    }),
+    execute: async (args) => {
+        if (args.start > args.end || args.start === args.end) {
+            socket.send("Invalid usage of start and end (start is over or equal to end)")
+        } else {
+            let start = Math.floor(new Date()/1000)-args.end*3600
+            let end = Math.floor(new Date()/1000)-args.start*3600
+            let timeout = 0;
+            socket.send(JSON.stringify({"call": "hisg", "args": {"text": args.text, "maxResults": args.maxResults, "start": start, "end": end}}))
+            while(arr.length === 0) {
+                await new Promise(resolve => setTimeout(resolve, 10));
+                timeout++;
+                if(timeout > 2500) {
+                    arr.push("failed! (timeout)")
+                }
+            }
+            return String(arr.pop())
+        }
+    }
+})
+
 server.start({
   transportType: "stdio",
 });

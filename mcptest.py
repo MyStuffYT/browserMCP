@@ -10,7 +10,7 @@ async def call_tool():
     async with client:
         print("done")
         await asyncio.to_thread(input, "press enter to call tool\n")
-        result = await client.call_tool("history_test")
+        result = await client.call_tool("simple_history_get", {"text": "js", "maxResults": 100, "start": 1, "end": 24})
         print(result)
 
 asyncio.run(call_tool())
